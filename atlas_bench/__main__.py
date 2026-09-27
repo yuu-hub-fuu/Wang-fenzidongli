@@ -26,7 +26,8 @@ STAGES = ("prepare", "infer", "collect", "evaluate")
 def cmd_list(args):
     for key, cls in REGISTRY.items():
         b = cls()
-        print(f"{key:22s} {b.display_name:24s} sidechains={'yes' if b.sidechains else 'no ':3s}  {b.protocol}")
+        sc = "yes" if b.sidechains else ("faspr" if b.default_sidechain_packer == "faspr" else "no")
+        print(f"{key:22s} {b.display_name:24s} sidechains={sc:5s}  {b.protocol}")
         if b.repo_url:
             print(f"{'':22s} {b.repo_url} @ {b.repo_commit[:10]}  (env: scripts/envs/{b.setup_script})")
 

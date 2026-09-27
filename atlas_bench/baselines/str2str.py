@@ -5,7 +5,9 @@ structure; we use the ATLAS starting structure (heavy atoms), as done for the
 ATLAS comparisons in ConfDiff/EBA. The default sampler sweeps 10 forward
 diffusion depths (``delta`` = 0.25..0.70 step 0.05) with ``n_replica`` samples
 each; ``n_replica = 25`` gives the 250 samples of the ATLAS protocol, merged by
-Str2Str into ``{output_dir}/all_delta/{name}.pdb``. Backbone-only output.
+Str2Str into ``{output_dir}/all_delta/{name}.pdb``. The output is backbone
+only (N, CA, C, O); as in the Str2Str README, side chains are packed with FASPR
+(``sidechains: faspr``, default) so that every Table 1 row can be computed.
 """
 from __future__ import annotations
 
@@ -26,7 +28,8 @@ class Str2Str(Baseline):
     repo_commit = "0b690e990e2a95c73766db9e053a0e0ae0b8b181"
     setup_script = "str2str.sh"
     sidechains = False
-    protocol = "src/eval.py task_name=inference, input = ATLAS start structure, 10 deltas x 25 replicas = 250 samples"
+    default_sidechain_packer = "faspr"
+    protocol = "src/eval.py task_name=inference, input = ATLAS start structure, 10 deltas x 25 replicas = 250 samples, FASPR side chains"
 
     def prepare(self, ctx: RunContext):
         atlas_data.export_start_structures(ctx.atlas_dir, ctx.targets, os.path.join(ctx.inputs_dir, "pdb"))

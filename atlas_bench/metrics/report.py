@@ -166,6 +166,22 @@ def format_table(df: pd.DataFrame, fmt: str = "markdown") -> str:
     return "\n".join(lines)
 
 
+def completeness(summaries: "OrderedDict[str, Dict[str, float]]") -> List[str]:
+    """Problems preventing a complete Table 1: missing baseline columns and empty cells."""
+    problems = []
+    for method, label in METHOD_DISPLAY_NAMES.items():
+        if method not in summaries:
+            if method == "anewsampling":
+                continue  # the paper's own model: only evaluable when its samples are provided
+            problems.append(f"missing column: {label}")
+            continue
+        for m in TABLE1_METRICS:
+            v = summaries[method].get(m.key, np.nan)
+            if v is None or (isinstance(v, float) and np.isnan(v)):
+                problems.append(f"empty cell: {label} / {m.label}")
+    return problems
+
+
 def parse_run_specs(specs: Sequence[str]) -> "OrderedDict[str, str]":
     """``METHOD=path/to/out.pkl`` pairs (a bare path uses its parent directory name)."""
     import os
@@ -189,6 +205,8 @@ def build_argparser(parser: Optional[argparse.ArgumentParser] = None):
     parser.add_argument("--no_paper", action="store_true", help="Do not print the paper-reported values")
     parser.add_argument("--format", choices=["markdown", "latex", "tsv"], default="markdown")
     parser.add_argument("--csv", default=None, help="Also save the full summary to CSV")
+    parser.add_argument("--require_complete", action="store_true",
+                        help="Exit with status 1 unless all 8 baseline columns x 13 rows are filled")
     return parser
 
 
@@ -210,6 +228,18 @@ def main(args=None):
     print(format_table(table1_frame(summaries, with_paper=not args.no_paper), args.format))
     if args.csv:
         full.to_csv(args.csv)
+    problems = completeness(summaries)
+    print()
+    if problems:
+        print(f"Table 1 INCOMPLETE ({len(problems)} problems):")
+        for p in problems:
+            print(f"  - {p}")
+    else:
+        print("Table 1 complete: all 8 baselines x 13 metrics filled.")
+    if "anewsampling" not in summaries:
+        print("  (AnewSampling column: paper values only; evaluate its samples with `run external` to fill it)")
+    if problems and getattr(args, "require_complete", False):
+        raise SystemExit(1)
     return summaries
 
 

@@ -80,6 +80,8 @@ def test_collect_and_evaluate(atlas, tmp_path, key):
         opts = {"patterns": [str(tmp_path / key / "raw" / "ext" / "{name}" / "*.pdb")]}
     if key == "biomd":
         opts = {"n_frames": 300}
+    if key == "str2str":
+        opts = {"sidechains": "none"}  # raw backbone path; FASPR packing is tested separately
     ctx = _ctx(atlas, tmp_path, key, **opts)
     baseline = get_baseline(key)
     write_mock_outputs(key, ctx, name)
@@ -97,7 +99,7 @@ def test_collect_and_evaluate(atlas, tmp_path, key):
                                                   out_path=os.path.join(ctx.run_dir, "out.pkl"))
     assert not failures
     out = results[name]
-    assert out["has_sidechains"] == baseline.sidechains
+    assert out["has_sidechains"] == baseline.expects_sidechains(ctx)
     # every predicted atom was matched to the reference
     assert out["n_aligned_atoms"] == ens.n_atoms
 
@@ -133,3 +135,49 @@ def test_perfect_ensemble_scores(atlas, tmp_path):
     assert s["Per target RMSF r"] > 0.95
     assert s["RMWD"] < 0.2
     assert s["PC sim > 0.5 %"] == 100
+
+
+def _faspr_bin():
+    from atlas_bench import sidechain_pack
+
+    try:
+        return sidechain_pack.find_faspr(os.path.join(os.path.dirname(__file__), "..", "third_party", "FASPR", "FASPR"))
+    except FileNotFoundError:
+        return None
+
+
+@pytest.mark.skipif(_faspr_bin() is None, reason="FASPR binary not built (scripts/envs/str2str.sh or $FASPR_BIN)")
+def test_str2str_faspr_fills_sidechain_rows(atlas, tmp_path):
+    """Default Str2Str protocol packs side chains, so every Table 1 row is defined."""
+    name = atlas["name"]
+    ctx = _ctx(atlas, tmp_path, "str2str", faspr_bin=_faspr_bin())
+    baseline = get_baseline("str2str")
+    assert baseline.sidechain_packer(ctx) == "faspr" and baseline.expects_sidechains(ctx)
+    write_mock_outputs("str2str", ctx, name)
+    rep = baseline.run_collect(ctx)
+    assert rep[name] == N, rep
+    assert os.path.exists(os.path.join(ctx.run_dir, "ensembles_backbone", f"{name}.pdb"))
+    results, failures = analyze.analyze_directory(ctx.atlas_dir, ctx.ensemble_dir, [name],
+                                                  out_path=os.path.join(ctx.run_dir, "out.pkl"))
+    assert not failures and results[name]["has_sidechains"]
+    ens = mdtraj.load(os.path.join(ctx.ensemble_dir, f"{name}.pdb"))
+    for res in ens.top.residues:
+        expected = {n for n, _ in synthetic.SIDECHAINS[res.name]}
+        assert expected <= {a.name for a in res.atoms}, res
+    # side-chain SASA exists, so the exposure statistics are computed from packed side chains
+    assert results[name]["af_sa_prob"].sum() > 0
+    # (the ideal-helix toy protein has no buried residues, so Exposed residue J itself is undefined here)
+
+def test_completeness_report():
+    from collections import OrderedDict
+
+    from atlas_bench.paper_table1 import METHOD_DISPLAY_NAMES, TABLE1_METRICS
+
+    full = {m.key: 0.5 for m in TABLE1_METRICS}
+    summaries = OrderedDict((k, dict(full)) for k in METHOD_DISPLAY_NAMES if k != "anewsampling")
+    assert report.completeness(summaries) == []
+    summaries["str2str"]["Exposed residue J"] = float("nan")
+    del summaries["mdgen"]
+    problems = report.completeness(summaries)
+    assert "missing column: MDGen" in problems
+    assert "empty cell: Str2Str / Exposed residue J" in problems

@@ -28,7 +28,7 @@ python3 --version                # ≥3.9，用于本框架（评估只用 CPU�
 
 ```bash
 pip install -e .
-pytest -q                        # 检查点：37 passed
+pytest -q                        # 检查点：全部 passed（FASPR 相关测试在 FASPR 编译前会 skip，属正常）
 python -m atlas_bench list       # 列出 8 个基线及其官方仓库/commit
 ```
 
@@ -54,7 +54,7 @@ bash scripts/envs/all.sh 2>&1 | tee setup.log      # 或逐个：bash scripts/en
 | esmflow_md_full / distilled | `alphaflow.sh` | `alphaflow` | `third_party/alphaflow/params/esmflow_md_{base,distilled}_202402.pt` |
 | confdiff | `confdiff.sh` | `confdiff` | `third_party/ConfDiff/checkpoints/ConfDiff-MD/` 下文件名含 `OF-r3` 的 ckpt；OpenFold 参数 `pretrain_repr/openfold/openfold_params/finetuning_no_templ_ptm_1.pt` |
 | bioemu | `bioemu.sh` | `bioemu` | 无（首次运行自动下载） |
-| str2str | `str2str.sh` | `str2str` | `third_party/Str2Str/data/ckpt/pretrain.pth` |
+| str2str | `str2str.sh` | `str2str` | `third_party/Str2Str/data/ckpt/pretrain.pth`；FASPR 可执行文件 `third_party/FASPR/FASPR`（脚本自动编译，需要 `g++`） |
 | mdgen | `mdgen.sh` | `mdgen` | `third_party/mdgen/weights/` 下的 ATLAS 模型 |
 | eba | `eba.sh` | `eba` | `third_party/eba/release.pt`、`third_party/eba/cutlass/`、`third_party/protenix_data/seq_to_pdb_index.json` |
 | biomd | `biomd_biokinema.sh` | `biokinema` | `third_party/BioKinema/checkpoints/BioKinema_atlas+misato+mdposit_sqrt.pt` |
@@ -112,13 +112,16 @@ python -m atlas_bench table \
   esmflow_md_full=runs/esmflow_md_full/out.pkl esmflow_md_distilled=runs/esmflow_md_distilled/out.pkl \
   confdiff=runs/confdiff/out.pkl bioemu=runs/bioemu/out.pkl str2str=runs/str2str/out.pkl \
   mdgen=runs/mdgen/out.pkl eba=runs/eba/out.pkl biomd=runs/biomd/out.pkl \
-  --format markdown --csv results_summary.csv | tee results_table.md
+  --format markdown --csv results_summary.csv --require_complete | tee results_table.md
 ```
+
+**目标是 Table 1 全部复现**：输出最后必须是 `Table 1 complete: all 8 baselines x 13 metrics filled.`。若出现 `Table 1 INCOMPLETE`，按列出的缺列/空格回到对应基线排查（常见原因：某些靶标 collect 失败、Str2Str 没有找到 FASPR）。
+若用户提供了 AnewSampling 的样本：编辑 `configs/baselines/external.yaml` 的 `patterns`，运行 `python -m atlas_bench run external --stages collect,evaluate`，并在上面的 `table` 命令中追加 `anewsampling=runs/anewsampling/out.pkl`，得到完整的 9 列。
 
 `[paper]` 列为论文数值。合理性判断：
 - `--fetch` 得到的 ESMFlow-MD、EBA 应与论文数值非常接近（通常差 ≤0.02，PC-sim 差几个百分点）；差距明显时优先排查评估步骤（ATLAS 数据是否完整、是否用了 `_fit.xtc`）。
 - BioMD 用的是 BioKinema 代理，参考值为 BioKinema 自带的 `third_party/BioKinema/experiments/atlas_benchmark/expected_metrics.txt`（RMWD 2.25、PC-sim 45.7%、Pairwise RMSD r 0.80），与论文中 BioMD 的数值本来就不完全相同。
-- Str2Str 的 Exposed residue J / MI 为 NaN 属正常（只有主链）；BioEmu 的 SASA 类指标只在 CB 层面计算。
+- Str2Str 默认用 FASPR 补侧链，所以全部 13 项都有值；BioEmu 的 SASA 类指标在 CB 层面计算。这些格子在论文中部分为 “-”，重跑后有数值属正常，在报告中注明即可。
 
 最后写 `RESULTS.md`，包括：结果表、每个基线用的是 fetch 还是推理、实际帧数、失败或跳过的靶标及原因、任何偏离默认配置的改动、硬件与总耗时。
 
@@ -132,6 +135,7 @@ python -m atlas_bench table \
 | MDGen 找不到 `weights/atlas.ckpt` | `ls third_party/mdgen/weights/`，把 ATLAS 模型路径写入 `configs/baselines/mdgen.yaml` 的 `options.ckpt` |
 | EBA 数据加载报错 / 缺 MSA | 确认 `third_party/protenix_data/` 已解压 release_data；ATLAS 序列不在其 MSA 索引中时，按 Protenix 的方式用 `third_party/eba/runner/msa_search.py` 生成。**或直接用 `--fetch`** |
 | BioKinema 内核编译失败 | 在 `configs/baselines/biomd.yaml` 设置 `options.cutlass_path`（CUTLASS v3.5.1）与 `options.cuda_home`（CUDA 11.8），确保 `ninja` 在 PATH 中 |
+| Str2Str collect 报 `FASPR binary not found` | 运行 `bash scripts/envs/str2str.sh` 编译 FASPR，或在 `configs/baselines/str2str.yaml` 设置 `options.faspr_bin` |
 | BioEmu 样本不足 250 | 框架会自动补采最多 4 轮；仍不足时调大 `options.oversample` 或设 `filter_samples: false`，并在报告中说明 |
 | 某靶标 CUDA OOM | 减小该基线的 batch 参数（ConfDiff `gen_batch_size`、Str2Str `replica_per_batch`、BioEmu `batch_size_100`），不改样本数 |
 | `collect` 报序列不匹配 | 查看报错中打印的两条序列；通常是输入用错了靶标，不要放宽匹配条件 |

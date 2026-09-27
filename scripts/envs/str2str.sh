@@ -15,4 +15,10 @@ if [ ! -s "$CKPT" ]; then
   in_env $ENV gdown 1YsvFXOpdst4QxK34GSWvLjgbvzUq4Ry8 -O "$CKPT" || {
     echo "[setup] download the checkpoint manually to $CKPT"; exit 1; }
 fi
+# FASPR side-chain packer (Str2Str README, "Tools"): packs the backbone-only samples
+FASPR_DIR="$THIRD_PARTY/FASPR"
+clone_repo https://github.com/tommyhuangthu/FASPR.git "$FASPR_DIR" 0d55732fd6307f373018c6bddd842291c355c5f7
+[ -x "$FASPR_DIR/FASPR" ] || (cd "$FASPR_DIR" && g++ -O3 --fast-math -o FASPR src/*.cpp)
+"$FASPR_DIR/FASPR" -i "$FASPR_DIR/example/1mol.pdb" -o /tmp/faspr_selftest.pdb >/dev/null 2>&1 \
+  && echo "[setup] FASPR ok" || echo "[setup] WARNING: FASPR self-test failed (check $FASPR_DIR/example)"
 echo "[setup] Str2Str ready."

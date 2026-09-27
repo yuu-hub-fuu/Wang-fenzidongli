@@ -5,4 +5,5 @@ options:
   filter_samples: true      # drop unphysical samples (BioEmu default), keep first 250 accepted
   oversample: 1.5
   batch_size_100: 10
-  sidechains: none          # "hpacker": reconstruct side chains with bioemu.sidechain_relax --no-md-equil
+  sidechains: none          # native N/CA/C/CB/O; "hpacker" = bioemu.sidechain_relax --no-md-equil; "faspr" = FASPR packing
+  faspr_bin: ${third_party}/FASPR/FASPR

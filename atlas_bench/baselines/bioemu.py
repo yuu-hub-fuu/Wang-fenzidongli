@@ -7,9 +7,9 @@ over-sampled ``M`` and keep the first 250 accepted frames (set
 ``filter_samples: false`` to keep all raw samples instead).
 
 Side chains beyond CB are absent unless ``sidechains: hpacker`` runs the
-official ``bioemu.sidechain_relax --no-md-equil`` reconstruction; with the
-AlphaFlow atom matching the SASA metrics are then computed at CB level
-(Table 1 reports "-" for BioEmu's Exposed residue J).
+official ``bioemu.sidechain_relax --no-md-equil`` reconstruction (or
+``sidechains: faspr`` packs them during collect); with ``none`` the SASA
+metrics are computed at CB level.
 """
 from __future__ import annotations
 

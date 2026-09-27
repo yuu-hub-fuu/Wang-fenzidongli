@@ -8,7 +8,7 @@
 | ESMFlow-MD (Distilled) | `esmflow_md_distilled_202402.pt` | 同上 | 同上 + `--noisy_first --no_diffusion` |
 | ConfDiff | **ConfDiff-OF-r3-MD**（与其 README 中 ATLAS 表格一致：0.59/0.67/0.85/2.76…） | [bytedance/ConfDiff](https://github.com/bytedance/ConfDiff) @ `9cfae1c` | ColabFold MSA → OpenFold 表征（3 recycles）→ `src/eval.py experiment=full_atom data/dataset=atlas`，250 samples |
 | BioEmu | `bioemu-v1.1`（Science 论文版本） | [microsoft/bioemu](https://github.com/microsoft/bioemu) @ `8babb71` | `bioemu.sample`，默认过滤非物理样本，取前 250 个；主链 + CB |
-| Str2Str | `pretrain.pth`（PDB 预训练，零样本） | [lujiarui/Str2Str](https://github.com/lujiarui/Str2Str) @ `0b690e9` | 输入 ATLAS 起始结构；10 个扩散深度 × 25 replica = 250；仅主链 |
+| Str2Str | `pretrain.pth`（PDB 预训练，零样本） | [lujiarui/Str2Str](https://github.com/lujiarui/Str2Str) @ `0b690e9` | 输入 ATLAS 起始结构；10 个扩散深度 × 25 replica = 250；主链输出后按其 README 用 FASPR 补侧链 |
 | MDGen | ATLAS 模型 `atlas.ckpt` | [bjing2016/mdgen](https://github.com/bjing2016/mdgen) @ `81482a4` | `sim_inference.py --num_frames 250 --num_rollouts 1 --suffix _R1`（从 R1 第 0 帧滚动 100 ns） |
 | EBA | `release.pt` | [lujiarui/eba](https://github.com/lujiarui/eba) @ `c1f3145` | Protenix `--predict_only`，`N_sample 250, N_step 20, λ 1.75, η 1.25, N_cycle 4, seed 42` |
 | BioMD | **BioKinema `sqrt` 检查点（代理，见下）** | [IDEA-XL/BioKinema](https://github.com/IDEA-XL/BioKinema) @ `e03508e` | `atlas_benchmark/run_reproduce.sh`：从 R1/R2/R3 第 0 帧各滚动 100 ns（1 ns/帧），合并 300 帧 |
@@ -87,7 +87,7 @@ python -m atlas_bench table esmflow_md_full=runs/esmflow_md_full/out.pkl confdif
 - **ESMFlow-MD**：AlphaFlow 作者在 HuggingFace 公开了论文所用的 250 样本系综（`--fetch`），可以精确复现 Table 1 数值；`infer` 模式用官方权重重新采样（随机性会带来小幅差异）。
 - **ConfDiff**：Table 1 中的 ConfDiff 数值与官方 README 的 `ConfDiff-OF-r3-MD` 一行完全一致，因此使用该模型。官方仓库中 `make_openfold_repr.py` 写出的表征路径/索引格式（`{ab}/{name}.node_repr.recycle3.npy`、无表头 CSV）与 `OpenFoldReprLoader` 读取的格式（`{name}/{name}_recycle3_single_repr.npy`、含 `seqres` 表头）不一致，`atlas_bench/tools/confdiff_repr_index.py` 负责桥接，不修改官方代码。
 - **BioEmu**：默认使用 `bioemu-v1.1`，保留 BioEmu 默认的非物理样本过滤，自动补采直到 ≥250 个样本（`filter_samples: false` 可关闭）。输出为主链 + CB（N、CA、C、CB、O），按 AlphaFlow 的原子匹配规则，SASA 类指标只在 CB 层面计算（Table 1 中 BioEmu 的 Exposed residue J 为 “-”）；`sidechains: hpacker` 可调用官方 `bioemu.sidechain_relax` 重建完整侧链。
-- **Str2Str**：零样本方法，输入为 ATLAS 起始结构（去氢）；官方默认 10 个扩散深度（0.25–0.70）×`n_replica`，取 25 得到 250 个样本；输出仅主链。
+- **Str2Str**：零样本方法，输入为 ATLAS 起始结构（去氢）；官方默认 10 个扩散深度（0.25–0.70）×`n_replica`，取 25 得到 250 个样本。模型只输出 N/CA/C/O，默认在 collect 阶段按 Str2Str README 推荐的 [FASPR](https://github.com/tommyhuangthu/FASPR)（@ `0d55732`）逐帧补侧链（`atlas_bench/sidechain_pack.py`，保持帧顺序），因此 Exposed residue J / MI 两行也能算出；未补侧链的系综保存在 `runs/str2str/ensembles_backbone/`。设 `sidechains: none` 可回到纯主链评估。
 - **MDGen**：按 MDGen README 的 ATLAS 推理命令，以 R1 第 0 帧为条件滚动 250 帧（400 ps/帧 = 100 ns）。官方 `scripts/prep_sims.py --atlas` 分支引用了未定义的 `args.atlas_dir`，因此用 `tools/mdgen_prep_atlas.py` 生成等价的 atom14 输入。
 - **EBA**：作者公开了 ATLAS 测试集 250 个样本（`--fetch`）。`infer` 模式按 `sh/sample_demo.sh` 的超参数运行，并自动生成 Protenix 所需的 mmCIF/bioassembly/索引（`indices_test.csv`），同时改写 `configs/configs_data.py` 中写死的数据路径。需要 Protenix `release_data`（CCD、MSA）。
 - **BioMD**：截至目前 BioMD（ICLR 2026）没有公开代码与权重。同一作者团队公开了其后续工作 **BioKinema**（论文参考文献 [24]），同样基于 Protenix 的“预测 + 插值”分层轨迹生成框架，并附带针对该 ATLAS 基准的完整复现包，因此这里以 BioKinema `sqrt` 检查点作为 BioMD 的公开代理（BioKinema 自带参考结果：RMWD 2.25 / PC-sim 45.7% / Pairwise RMSD r 0.80，与 Table 1 中 BioMD 的 2.18 / 46% / 0.70 接近但不相同）。其协议评估 81 个靶标（排除 `7aex_A`）、每个靶标 300 帧，均在 `configs/baselines/biomd.yaml` 中体现；若获得 BioMD 检查点，替换 `options.ckpt` 即可。
@@ -96,7 +96,7 @@ python -m atlas_bench table esmflow_md_full=runs/esmflow_md_full/out.pkl confdif
 
 - **指标移植的数值等价性**：在由 ATLAS 真实起始结构构建的合成靶标上，与原始 AlphaFlow `analyze_ensembles.py` / `print_analysis.py` 逐项比较，逐靶标最大绝对差 2.4×10⁻⁷（float32 舍入），汇总表完全一致。可在真实数据上复查：
   `python scripts/verify_against_alphaflow.py --alphaflow_repo third_party/alphaflow --atlas_dir data/atlas --pdbdir runs/esmflow_md_full/ensembles --pdb_id 6o2v_A 7ead_A`
-- **测试**：`pytest`（37 项）覆盖指标性质（高斯 W2 闭式解、sqrtm、经验 W2、互信息）、8 个基线原生输出格式 → 统一系综 → 评估 → Table 1 的全链路，以及各基线推理命令中的协议参数。
+- **测试**：`pytest`（39 项，其中 FASPR 测试在找到 FASPR 可执行文件时运行）覆盖指标性质（高斯 W2 闭式解、sqrtm、经验 W2、互信息）、8 个基线原生输出格式 → 统一系综 → 评估 → Table 1 的全链路，以及各基线推理命令中的协议参数。
 - 本仓库在无 GPU 的环境中开发，**尚未在 GPU 上实际运行各基线推理**；推理命令依据各官方仓库固定 commit 的源码与 README 编写，首次运行时请检查 `runs/<baseline>/logs/`。
 
 ## 与论文数值可能存在差异的原因
@@ -104,4 +104,5 @@ python -m atlas_bench table esmflow_md_full=runs/esmflow_md_full/out.pkl confdif
 1. Table 1 的基线数值来自 BioMD 论文（其又转引自各原始论文），并非统一重跑；采样随机性、ColabFold MSA 服务器随时间更新都会带来小幅差异。
 2. 系综大小影响部分指标（AlphaFlow README 明确提醒）：默认均为 250 帧，BioMD/BioKinema 为 300 帧，BioEmu 过滤后若不足 250 帧会在 `manifest.json` 中记录。
 3. BioMD 使用公开代理 BioKinema（见上）。
-4. Str2Str 仅输出 N/CA/C/O，SASA 类指标为 NaN；BioEmu 带 CB，SASA 类指标在 CB 层面计算（论文中两者的 Exposed residue J 均为 “-”）。`out.pkl` 中的 `has_cb` / `has_sidechains` 与汇总表的 “Side-chain coverage %” 记录了这一点。
+4. 为了让 Table 1 每一格都有值：Str2Str 默认用 FASPR 补侧链后再评估；BioEmu 默认用其原生输出（带 CB），SASA 类指标在 CB 层面计算（也可设 `sidechains: faspr` 或 `hpacker` 补全侧链）。论文中这两者的部分格子为 “-”，重跑后会比论文多出数值。`out.pkl` 中的 `has_cb` / `has_sidechains` 与汇总表的 “Side-chain coverage %” 记录了实际情况。
+5. `table` 命令最后会检查完整性：8 个基线 × 13 项指标有任何缺列或空格都会列出，加 `--require_complete` 时以非零状态退出。AnewSampling 列需要提供其样本（`run external`），否则只显示论文数值。

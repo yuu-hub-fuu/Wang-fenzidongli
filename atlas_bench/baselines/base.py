@@ -113,6 +113,7 @@ class Baseline:
     repo_commit: str = ""  # commit the harness was written against
     setup_script: str = ""  # scripts/envs/<file>
     sidechains: bool = True  # whether raw outputs contain side-chain atoms
+    default_sidechain_packer: str = "none"  # "faspr": pack backbone-only outputs during collect
     protocol: str = ""  # one-line description of the sampling protocol
     default_n_frames: Optional[int] = None  # None -> ctx.n_samples (250, AlphaFlow protocol)
 
@@ -141,6 +142,12 @@ class Baseline:
         return {}
 
     # ------------------------------------------------------------------ helpers
+    def sidechain_packer(self, ctx: RunContext) -> str:
+        return str(ctx.opt("sidechains", self.default_sidechain_packer))
+
+    def expects_sidechains(self, ctx: RunContext) -> bool:
+        return self.sidechains or self.sidechain_packer(ctx) in ("faspr", "hpacker")
+
     def n_frames(self, ctx: RunContext) -> Optional[int]:
         return ctx.opt("n_frames", self.default_n_frames or ctx.n_samples)
 
@@ -208,14 +215,23 @@ class Baseline:
                     continue
                 kwargs = dict(self.collect_kwargs(ctx))
                 kwargs.update(spec.get("kwargs", {}))
+                out_pdb = os.path.join(ctx.ensemble_dir, f"{t.name}.pdb")
+                faspr = self.sidechain_packer(ctx) == "faspr"
+                merged = os.path.join(ctx.run_dir, "ensembles_backbone", f"{t.name}.pdb") if faspr else out_pdb
                 _, n = ensemble_io.build_ensemble(
                     files,
-                    os.path.join(ctx.ensemble_dir, f"{t.name}.pdb"),
+                    merged,
                     ref_pdb=ctx.ref_pdb(t.name),
                     top_path=spec.get("top"),
                     n_frames=self.n_frames(ctx),
                     **kwargs,
                 )
+                if faspr:
+                    from .. import sidechain_pack
+
+                    n = sidechain_pack.faspr_pack_ensemble(
+                        merged, out_pdb, ctx.opt("faspr_bin"), int(ctx.opt("faspr_workers", 8))
+                    )
                 report[t.name] = n
             except Exception as e:  # keep collecting other targets
                 report[t.name] = f"error: {type(e).__name__}: {e}"
@@ -236,6 +252,7 @@ class Baseline:
                 "repo_commit_reference": self.repo_commit,
                 "repo_commit_used": _git_head(ctx.repo_dir),
                 "protocol": self.protocol,
+                "sidechain_packer": self.sidechain_packer(ctx),
                 "n_samples": ctx.n_samples,
                 "seed": ctx.seed,
                 "updated": datetime.datetime.now().isoformat(timespec="seconds"),

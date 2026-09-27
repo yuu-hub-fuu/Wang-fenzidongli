@@ -5,3 +5,6 @@ options:
   ckpt: ${third_party}/Str2Str/data/ckpt/pretrain.pth
   n_replica: 25             # x 10 forward-diffusion depths = 250 samples
   replica_per_batch: 64
+  sidechains: faspr         # pack backbone samples with FASPR (Str2Str README) so all Table 1 rows exist; "none" = backbone only
+  faspr_bin: ${third_party}/FASPR/FASPR
+  faspr_workers: 8

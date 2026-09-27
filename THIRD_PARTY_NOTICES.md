@@ -12,6 +12,6 @@
 The baselines themselves are not redistributed: `scripts/envs/*.sh` clone the
 official repositories and download the authors' weights, which remain under
 their own licenses (AlphaFlow MIT, ConfDiff Apache-2.0, BioEmu MIT, Str2Str
-MIT, MDGen MIT, EBA MIT + Apache-2.0 (Protenix parts), BioKinema Apache-2.0 code /
+MIT, MDGen MIT, FASPR MIT, EBA MIT + Apache-2.0 (Protenix parts), BioKinema Apache-2.0 code /
 CC BY-NC 4.0 data).
 The ATLAS database (https://www.dsimb.inserm.fr/ATLAS) has its own terms of use.

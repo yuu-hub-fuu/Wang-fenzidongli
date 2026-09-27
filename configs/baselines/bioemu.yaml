@@ -1,0 +1,8 @@
+# BioEmu (pip package "bioemu"); backbone-only samples.
+python: conda run --no-capture-output -n bioemu python
+options:
+  model_name: bioemu-v1.1   # checkpoint of the Science paper (v1.0 = preprint)
+  filter_samples: true      # drop unphysical samples (BioEmu default), keep first 250 accepted
+  oversample: 1.5
+  batch_size_100: 10
+  sidechains: none          # "hpacker": reconstruct side chains with bioemu.sidechain_relax --no-md-equil

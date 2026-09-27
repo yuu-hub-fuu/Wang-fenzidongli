@@ -1,0 +1,8 @@
+# MDGen ATLAS model: one 250-frame rollout from frame 0 of replica R1.
+repo_dir: ${third_party}/mdgen
+python: conda run --no-capture-output -n mdgen python
+options:
+  ckpt: ${third_party}/mdgen/weights/atlas.ckpt   # https://huggingface.co/bjing-mit/mdgen
+  replica: 1
+  num_frames: 250
+  num_rollouts: 1

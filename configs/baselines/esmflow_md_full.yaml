@@ -1,0 +1,8 @@
+# ESMFlow-MD (Full): AlphaFlow repo, ESMFold backbone fine-tuned on ATLAS MD.
+repo_dir: ${third_party}/alphaflow
+python: conda run --no-capture-output -n alphaflow python
+mode: infer            # "fetch" downloads the authors' released 250-sample ensembles instead
+options:
+  weights: ${third_party}/alphaflow/params/esmflow_md_base_202402.pt
+  steps: 10            # default schedule --tmax 1.0 --steps 10
+  tmax: 1.0

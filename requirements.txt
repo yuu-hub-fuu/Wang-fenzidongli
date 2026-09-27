@@ -1,0 +1,10 @@
+# Evaluation / orchestration environment (the baselines run in their own envs, see scripts/envs/)
+numpy>=1.21
+scipy>=1.7
+pandas>=1.5
+scikit-learn>=1.0
+mdtraj>=1.9.9
+biotite>=0.39
+pyyaml>=6.0
+tqdm
+pytest

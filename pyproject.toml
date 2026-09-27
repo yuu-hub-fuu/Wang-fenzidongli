@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlas-bench"
+version = "0.1.0"
+description = "Reproduction harness for the ATLAS baselines of Table 1 (AnewSampling paper)"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21", "scipy>=1.7", "pandas>=1.5", "scikit-learn>=1.0", "mdtraj>=1.9.9", "biotite>=0.39", "pyyaml>=6.0", "tqdm"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+atlas-bench = "atlas_bench.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["atlas_bench*"]
+
+[tool.setuptools.package-data]
+atlas_bench = ["data/splits/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

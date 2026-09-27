@@ -1,0 +1,13 @@
+# BioMD: no public release; run with its public successor BioKinema (same authors),
+# using BioKinema's own ATLAS reproduction package. Replace ckpt with a BioMD
+# checkpoint if available.
+repo_dir: ${third_party}/BioKinema
+python: conda run --no-capture-output -n biokinema python
+options:
+  ckpt: ${third_party}/BioKinema/checkpoints/BioKinema_atlas+misato+mdposit_sqrt.pt
+  init_frames: atlas        # "shipped": use the package's bundled frame-0 CIFs
+  n_frames: 300             # union of 3 x 100 generated frames (seed-66 shuffle, first 300)
+  shuffle_seed: 66
+  exclude_targets: [7aex_A] # the package scores 81 of the 82 targets
+  # cutlass_path: /path/to/cutlass
+  # cuda_home: /usr/local/cuda-11.8

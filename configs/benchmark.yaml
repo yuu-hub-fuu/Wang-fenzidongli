@@ -1,0 +1,23 @@
+# Global settings of the ATLAS benchmark (Table 1 of the AnewSampling paper).
+# Relative paths are resolved against the repository root.
+
+atlas_dir: data/atlas            # {name}/{name}.pdb + {name}_prod_R{1,2,3}_fit.xtc
+split: atlas_bench/data/splits/atlas_test.csv   # 82 targets (AlphaFlow split)
+runs_dir: runs                   # runs/<baseline>/{inputs,raw,ensembles,out.pkl}
+third_party_dir: third_party     # official repositories (scripts/envs/*.sh clone here)
+
+n_samples: 250                   # AlphaFlow protocol: 250 conformations per target
+seed: 42
+gpus: ["0"]                      # GPU ids used for sharding targets
+eval_workers: 8                  # CPU processes for the evaluation stage
+
+# Table 1 column order
+baselines:
+  - esmflow_md_full
+  - esmflow_md_distilled
+  - confdiff
+  - bioemu
+  - str2str
+  - mdgen
+  - eba
+  - biomd

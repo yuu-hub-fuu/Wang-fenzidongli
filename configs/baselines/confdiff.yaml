@@ -1,0 +1,14 @@
+# ConfDiff-OF-r3-MD (the "ConfDiff" column of Table 1).
+repo_dir: ${third_party}/ConfDiff
+python: conda run --no-capture-output -n confdiff python
+options:
+  # ConfDiff-MD checkpoints from https://huggingface.co/leowang17/ConfDiff/tree/main/ConfDiff-MD
+  # (scripts/envs/confdiff.sh downloads them to checkpoints/ConfDiff-MD); null = auto-detect "OF-r3".
+  ckpt: null
+  openfold_ckpt: ${third_party}/ConfDiff/pretrain_repr/openfold/openfold_params/finetuning_no_templ_ptm_1.pt
+  num_recycles: 3
+  gen_batch_size: 20
+  skip_msa: false      # set true if MSAs already exist in msa_dir
+  skip_repr: false
+  # msa_dir: /path/to/msa
+  # openfold_repr_dir: /path/to/openfold_repr

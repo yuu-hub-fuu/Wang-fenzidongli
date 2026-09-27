@@ -1,0 +1,7 @@
+# Evaluate pre-generated ensembles (e.g. AnewSampling) with the same pipeline:
+#   python -m atlas_bench run external --stages collect,evaluate
+run_name: anewsampling
+options:
+  patterns: ["/path/to/anewsampling_samples/{name}/*.pdb"]
+  top: null
+  n_frames: 250

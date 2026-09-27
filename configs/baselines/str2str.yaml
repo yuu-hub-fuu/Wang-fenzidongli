@@ -1,0 +1,7 @@
+# Str2Str (zero-shot, PDB-trained); input = ATLAS starting structure; backbone-only samples.
+repo_dir: ${third_party}/Str2Str
+python: conda run --no-capture-output -n str2str python
+options:
+  ckpt: ${third_party}/Str2Str/data/ckpt/pretrain.pth
+  n_replica: 25             # x 10 forward-diffusion depths = 250 samples
+  replica_per_batch: 64

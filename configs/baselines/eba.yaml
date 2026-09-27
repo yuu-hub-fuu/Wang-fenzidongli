@@ -1,0 +1,13 @@
+# EBA (Protenix-based, ICML 2025).
+repo_dir: ${third_party}/eba
+python: conda run --no-capture-output -n eba python
+mode: infer                 # "fetch" downloads the released 250-sample artifacts
+options:
+  ckpt: ${third_party}/eba/release.pt
+  protenix_data_root: ${third_party}/protenix_data/   # release_data.tar.gz (MSAs, CCD) from the EBA README
+  cutlass_path: ${third_party}/eba/cutlass
+  noise_scale_lambda: 1.75
+  step_scale_eta: 1.25
+  N_step: 20
+  N_cycle: 4
+  seed: 42

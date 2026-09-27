@@ -1,0 +1,8 @@
+# ESMFlow-MD (Distilled): single-step distilled model (--noisy_first --no_diffusion).
+repo_dir: ${third_party}/alphaflow
+python: conda run --no-capture-output -n alphaflow python
+mode: infer            # or "fetch"
+options:
+  weights: ${third_party}/alphaflow/params/esmflow_md_distilled_202402.pt
+  steps: 10
+  tmax: 1.0

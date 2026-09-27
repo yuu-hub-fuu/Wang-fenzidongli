@@ -49,6 +49,8 @@ tests/                                     # 指标、各基线输出格式 → 
 
 ## 使用方法
 
+> 让 AI 编程助手（Claude Code、Codex 等）代为执行时，直接让它按 [`AGENTS.md`](AGENTS.md) 操作（`CLAUDE.md` 会自动引用它）。
+
 ```bash
 # 0) 评估/调度环境（CPU 即可）
 pip install -e .
